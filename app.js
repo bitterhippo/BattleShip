@@ -359,7 +359,14 @@ let resetButton = document.getElementById('reset')
   // Display board **Doesn't currently render entire board
     render () {
       game.playerOne.takenTiles.forEach(x => document.getElementById(`${x}`).style.backgroundColor = `green`)
+      if (game.playerOne.active_Ships.length === 4 && game.automatedOpponent.active_Ships.length ===4) {
+        game.playerOne.takenTiles.forEach(x => document.getElementById(`${x}`).style.backgroundColor = `#3987c9`)
+      }
     },
+    aiRender() {
+      game.automatedOpponent.takenTiles.forEach(x => document.getElementById(`${x}`).style.backgroundColor = `red`)
+    },
+    
   // Player Data
     playerOne: {
       active_Ships : [],
@@ -373,35 +380,41 @@ let resetButton = document.getElementById('reset')
       available_Actions: [],
       previousShots : [],
       allowedDeployments : cellsIDs,
-      takenTiles : [0],
+      takenTiles : [],
       damage: 0
     },
   // AI Setup //NEEDS REFACTOR
     aiSetUp () {
+      let allowedAI = game.automatedOpponent.takenTiles
+
       if (game.state.intialized === true && this.automatedOpponent.active_Ships.length < 5) {
         let setUp = game.automatedOpponent.active_Ships
 
-        for (let currentShip in game.state.ships) {
-          setUp.push(new AI_Ship) 
-          setUp[currentShip].name = game.state.shipNames[currentShip]
-          setUp[currentShip].size = game.state.shipSizes[currentShip]
+      for (let currentShip in game.state.ships) {
+        setUp.push(new AI_Ship) 
+        setUp[currentShip].name = game.state.shipNames[currentShip]
+        setUp[currentShip].size = game.state.shipSizes[currentShip]
         
-        if (game.automatedOpponent.active_Ships[currentShip].ori === 1) {
-          setUp[currentShip].X = game.random(10 - game.automatedOpponent.active_Ships[currentShip].size)
-          setUp[currentShip].Y = game.random(10)
+      if (game.automatedOpponent.active_Ships[currentShip].ori === 1) {
+        setUp[currentShip].X = game.random(10)
+        setUp[currentShip].Y = game.random(10)
           
-          game.populate(game.automatedOpponent.active_Ships[currentShip], false)
+        game.populate(game.automatedOpponent.active_Ships[currentShip], false)
         } 
 
-        if (game.automatedOpponent.active_Ships[currentShip].ori === 2) {
-          setUp[currentShip].X = game.random(10)
-          setUp[currentShip].Y = game.random(10 - game.automatedOpponent.active_Ships[currentShip].size)
+      if (game.automatedOpponent.active_Ships[currentShip].ori === 2) {
+        setUp[currentShip].X = game.random(10 - game.automatedOpponent.active_Ships[currentShip].size)
+        setUp[currentShip].Y = game.random(10)
           
-          game.populate(game.automatedOpponent.active_Ships[currentShip], false)
-        } 
-          
-        }  
-      }
+        game.populate(game.automatedOpponent.active_Ships[currentShip], false)  
+       } 
+      }    
+    } 
+    
+    if (allowedAI.map(x => allowedAI.filter(y => x === y).length).includes(2) || allowedAI.join(``).includes(`11`) === true) {
+        game.aiReset()
+        game.aiSetUp()
+      }  
     },
   // Game States **Suggest removal of playerDamage
     state : {
@@ -411,20 +424,6 @@ let resetButton = document.getElementById('reset')
       shipNames: [`frigate`,`cruiser`,`carrier`,`battleship`],
       shipSizes : [2,3,4,5],
       // Iterate over active ships and determine how many hitboxes are damaged then if 3 or more are damage set intailize to false and display win/loss.
-      damage () {
-        game.playerOne.damage = Object.values(game.playerOne.active_Ships[0]).splice(2,5).filter(x => x[0] === `damaged`).length
-        game.automatedOpponent.damage = Object.values(game.automatedOpponent.active_Ships[0]).splice(2,5).filter(x => x[0] === `damaged`).length
-        if (game.playerOne.damage >= 3) {
-          game.state.intialized = false;
-          alert(`They've crippled your cruiser!`)
-          game.reset()
-        }
-        if (game.automatedOpponent.damage >= 3) {
-          game.state.intialized = false
-          alert(`You crippled their cruiser!`)
-          game.reset()
-        }
-       }
     },
   // Start game function. neccesary for creating game states and populating neccesary objects.
     initialize () {
@@ -441,14 +440,22 @@ let resetButton = document.getElementById('reset')
           game.state.operations++;
           game.render()
           setTimeout(() => {
-            game.initialize(count += 1);
+            game.initialize();
             }, 1000);} else {
           }
-        if (game.state.operations === 4) {
-          game.place()
-          game.aiSetUp()
+
+        if (game.playerOne.takenTiles.length !== 14 && game.state.operations === 3 && game.playerOne.active_Ships.length === 4) {
+          console.log(`Invalid Player inputs detected!`)
+          game.reset()
         }
-      game.intialized = true;
+
+        if (game.playerOne.takenTiles.length === 14 && game.state.operations === 3 && game.playerOne.active_Ships.length === 4) {
+          game.intialized = true
+          alert(`Placement Phase is over. Please left click on a tile to shoot. The AI will then shoot at your ships.`)
+          game.aiSetUp()
+          game.place()
+          game.place(game.automatedOpponent.takenTiles, 'e')
+        }
     ;
   },
     // Assign positions for ships
@@ -457,26 +464,21 @@ let resetButton = document.getElementById('reset')
       let yValues = []
       directory.forEach(x => xValues.push(x.split(`-`)[1]))
       directory.forEach(x => yValues.push(x.split(`-`)[0]))
-      if (directory === game.playerOne.takenTiles) {
       for (let current in yValues) {
         game.board[yValues[current]][xValues[current]].display += input
       }
-        } else {
-        game.board[yValues[current]][xValues[current]].display += input
-    }
   },
   // Adds interactable parameters to active ships and ensures that ships will render
     populate (directory = game.playerOne.active_Ships, isPlayer = true) {
         let allowed = game.playerOne.takenTiles
-        let allowedAI = game.automatedOpponent.takenTiles
         for (let i = 0; i < directory.size; i++) {
           let newX = `Y${directory.Y}-X${directory.X + i}`
           let newY = `Y${directory.Y + i}-X${directory.X}`
           let current = `Y${directory.Y}-X${directory.X}`
           let push = x => game.playerOne.takenTiles.push(x)
-          let push1 = x => game.automatedOpponent.takenTiles.push(x)
+          let push1 = x => game.automatedOpponent.takenTiles.push(x)  
 
-        if (isPlayer === true) {
+      if (isPlayer === true) {
           if (directory.ori === 1 && i === 0) {
           directory.hitBox.push(`${current}`)
           push(current)
@@ -513,45 +515,32 @@ let resetButton = document.getElementById('reset')
         game.reset()
         break;
         }
-    if (allowedAI.filter(x => x === current).length > 1 && isPlayer === false) {
-        game.automatedOpponent.takenTiles = [0]
-        game.automatedOpponent.active_Ships = []
-        game.aiSetUp()
-        }
-         
-         game.render()
-         }    
-      
+    
+        game.render()
+      }    
     },
   // Shooting and hit allocation mechanism
-  // STILL ALLOWS SHOT ASSIGNMENTS OUTSIDE OF BOARD
-    shoot (x,y,enemy = game.automatedOpponent.active_Ships[0]) {
+    shoot (x,y,dir = game.automatedOpponent) {
       let xCoord = `${x}`
       let yCoord = `${y}`
-      if (game.board[yCoord][xCoord].display.includes(`e`) || game.board[yCoord][xCoord].display.includes(`s`)) {
-        if (enemy.hitBox1[0] === yCoord && enemy.hitBox1[1] === xCoord) {
-        console.log(`DIRECT HIT`)
-        enemy.hitBox1.shift()
-        enemy.hitBox1.shift()
-        enemy.hitBox1.push('damaged')
-      }
-        if (enemy.hitBox2[0] === yCoord && enemy.hitBox2[1] === xCoord) {
-        console.log(`DIRECT HIT`)
-        enemy.hitBox2.shift()
-        enemy.hitBox2.shift()
-        enemy.hitBox2.push('damaged')
-      }
-        if (enemy.hitBox3[0] === yCoord && enemy.hitBox3[1] === xCoord) {
-        console.log(`DIRECT HIT`)
-        enemy.hitBox3.shift()
-        enemy.hitBox3.shift()
-        enemy.hitBox3.push('damaged')
-      }
+      let hit = ``;
+
+    for (let current in dir.active_Ships) {
+      if (dir.active_Ships[current].hitBox.includes(`${y}-${x}`)) {
+        hit = dir.active_Ships[current]
+        dir.active_Ships[current].hitBox[dir.active_Ships[current].hitBox.indexOf(`${y}-${x}`)] = `damaged`
+        dir.damage++;
+        if (dir.damage === 14 && dir === game.automatedOpponent) {
+          alert(`You sunk their battleship!`)
+          game.reset()
+        }
+        if (dir.damage === 14 && dir !== game.automatedOpponent) {
+          alert(`You lose! The AI sunk your battleship!`)
+          game.reset()
+        }
+      } 
     }
-        if (game.board[yCoord][xCoord].display.includes(`e`) === false && game.board[yCoord][xCoord].display.includes(`s`) === false) {
-        console.log(`MISSERS BOI`)
-     }
-  },
+    },
     //Take Turns **Map to board
     takeTurn () {
       let value = game.automatedOpponent.available_Actions[game.random(game.automatedOpponent.available_Actions.length - 1)]
@@ -559,7 +548,7 @@ let resetButton = document.getElementById('reset')
       let Y = value.split('-')[0]
         if (game.automatedOpponent.previousShots.includes(`${Y}-${X}`) === false) {
         game.automatedOpponent.previousShots.push(`${Y}-${X}`)
-        game.shoot(X,Y, game.playerOne.active_Ships[0])
+        game.shoot(X,Y,game.playerOne)
       } else {
         game.takeTurn()
       }
@@ -575,6 +564,7 @@ let resetButton = document.getElementById('reset')
           //ship.ori too high / too low
           if (obj[current].ori > 2 ||  obj[current].ori < 0) {
             console.log(`invalid input: horizontal / vertical value is outside parameters!`)
+            game.reset()
             return false;
           }
         }
@@ -586,7 +576,7 @@ let resetButton = document.getElementById('reset')
       game.playerOne.takenTiles = []
       game.automatedOpponent.active_Ships = []
       game.automatedOpponent.previousShots = []
-      game.automatedOpponent.takenTiles = [0]
+      game.automatedOpponent.takenTiles = []
       game.state.operations = 0
       //Change game state
       game.state.intialized = false;
@@ -601,6 +591,11 @@ let resetButton = document.getElementById('reset')
         Object.keys(game.board[currentY]).forEach(x => game.board[currentY][x].display = `w`)
        }
   },
+    aiReset () {
+      game.automatedOpponent.active_Ships = []
+      game.automatedOpponent.previousShots = []
+      game.automatedOpponent.takenTiles = []
+    },
   //Randommized - needed for AI
     random (max) { 
       return Math.floor(Math.random() * max) + 1;  
@@ -623,7 +618,6 @@ for (let i = 0; i < 100; i++) {
       if ((game.board[cellsY][cellsX].display.includes('e') === false)) {
         document.getElementById(`${cellsY}-${cellsX}`).style.backgroundColor = "white"
       }
-      game.state.damage()
       game.takeTurn()
     }
   ;})
@@ -637,7 +631,8 @@ initButton.addEventListener(`click`, function() {
    cellsArray.forEach(x => x.style.border = `1px solid black`)
   }
 })
-const color = () => cellsArray.forEach(x => x.style.backgroundColor = `3987c9`)
+
+
 cellsArray.forEach(x => x.style.border = `1px solid black`)
 cellsArray.forEach(x => cellsIDs.push(x.id))
 cellsArray.forEach(x => x.innerHTML = (x.id))
@@ -647,5 +642,17 @@ initButton.addEventListener('click', game.initialize)
 resetButton.addEventListener('click', game.reset)
 
 
+
 //document.getElementById(`${cellsY}-${cellsX}`).style.border = `1px solid black`
 
+//if (allowedAI.filter(x => x === current).length > 1 && isPlayer === false || newX.split('-')[1].split(`X`)[1] === `11` || newY.split('-')[0].split(`Y`)[1] === `11`) {
+//  game.aiReset()
+// game.aiSetUp()
+//  break;
+//  } 
+
+//if (allowed.filter(x => x === current).length > 1 && isPlayer === true) {
+//  alert(`Duplicate inputs detected`)
+//  game.reset()
+//  break;
+//  }

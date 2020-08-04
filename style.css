@@ -8,9 +8,10 @@
   background-color: silver;
   display: inline-grid;
   grid-template-columns: 15% 70% 15%;
-  width: 100%;
-  height: 100%;
+  width: 1000px;
+  height: 1000px;
   text-align: center;
+
 }
 
 #left-panel {
@@ -36,13 +37,14 @@ button {
   border: 10px solid #848482;
   display: inline-grid;
   background-color:#3987c9;
+  margin-top: 50px;
   grid-template-columns: auto auto auto auto auto auto auto auto auto auto;
   width: 635px;
   height: 635px;
 }
 
 #sub-panel {
-  width: 100%;
+  width: 1000px;
   height: 200px;
   background-color: slategray;
 }
